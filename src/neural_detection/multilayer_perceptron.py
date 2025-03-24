@@ -169,6 +169,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import copy
+from tqdm import tqdm
+
 
 # Utility to extract specific weights
 def get_weights(model):
@@ -266,7 +268,7 @@ def train(
     data_loaders,
     criterion=nn.MSELoss(reduction="mean"),
     nepochs=100,
-    verbose=False,
+    verbose=True,
     early_stopping=True,
     patience=5,
     l1_const=1e-4,
@@ -276,67 +278,67 @@ def train(
     device=torch.device("cpu"),
 ):
     optimizer = opt_func(net.parameters(), lr=learning_rate, weight_decay=l2_const)
-
     best_loss = float("inf")
     best_net = None
+    patience_counter = 0
 
     if "val" not in data_loaders:
         early_stopping = False
-
-    patience_counter = 0
 
     if verbose:
         print("Starting training...")
         if early_stopping:
             print("Early stopping enabled")
 
+    for epoch in range(nepochs):
+        net.train()
+        running_loss = 0.0
+        run_count = 0
 
-            for epoch in range(nepochs):
-                running_loss = 0.0
-                run_count = 0
-                for _, data in enumerate(data_loaders["train"], 0):
-                    inputs, labels = data
-                    inputs = inputs.to(device)
-                    labels = labels.to(device)
-                    optimizer.zero_grad()
+        for _, data in enumerate(data_loaders["train"], 0):
+            inputs, labels = data
+            inputs, labels = inputs.to(device), labels.to(device)
+            optimizer.zero_grad()
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
 
-                    outputs = net(inputs)
-                    loss = criterion(outputs, labels).mean()
+            # Add L1 regularization
+            if l1_const > 0:
+                l1_penalty = sum(p.abs().sum() for p in net.parameters())
+                loss += l1_const * l1_penalty
 
-                    # L1 regularization
-                    if l1_const > 0:
-                        l1_penalty = 0
-                        for param in net.parameters():
-                            l1_penalty += torch.norm(param, 1)
-                        loss += l1_const * l1_penalty
+            loss.backward()
+            optimizer.step()
 
-                    loss.backward()
-                    optimizer.step()
+            running_loss += loss.item()
+            run_count += 1
 
-                    running_loss += loss.item()
-                    run_count += 1
+        avg_train_loss = running_loss / run_count
 
-                if verbose:
-                    print(f"Epoch {epoch+1}/{nepochs}, Training Loss: {running_loss / run_count:.4f}")
-
-                # Validation & early stopping
-                if early_stopping and "val" in data_loaders:
-                    val_loss = evaluate(net, data_loaders["val"], criterion, device).item()
+        # Validation & Early Stopping
+        val_loss = None
+        if early_stopping and "val" in data_loaders:
+            net.eval()
+            val_loss = evaluate(net, data_loaders["val"], criterion, device).item()
+            if val_loss < best_loss:
+                best_loss = val_loss
+                best_net = copy.deepcopy(net.state_dict())
+                patience_counter = 0
+            else:
+                patience_counter += 1
+                if patience_counter >= patience:
                     if verbose:
-                        print(f"Validation Loss: {val_loss:.4f}")
+                        print(f"Early stopping at epoch {epoch+1}")
+                    break
 
-                    if val_loss < best_loss:
-                        best_loss = val_loss
-                        best_net = copy.deepcopy(net)
-                        patience_counter = 0
-                    else:
-                        patience_counter += 1
-                        if patience_counter >= patience:
-                            if verbose:
-                                print(f"Early stopping at epoch {epoch+1}")
-                            break
+        if verbose:
+            val_msg = f"Validation Loss: {val_loss:.4f}" if val_loss is not None else ""
+            print(f"Epoch {epoch+1}/{nepochs}, Training Loss: {avg_train_loss:.4f}{val_msg}")
 
-            if early_stopping and best_net is not None:
-                net.load_state_dict(best_net.state_dict())
+    # Load best model if early stopping
+    if early_stopping and best_net is not None:
+        net.load_state_dict(best_net)
 
-            return net
+    # Return trained model and validation loss (or training loss if no validation)
+    final_val_loss = best_loss if early_stopping else evaluate(net, data_loaders.get("val", data_loaders["train"]), criterion, device).item()
+    return net, final_val_loss

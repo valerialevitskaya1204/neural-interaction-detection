@@ -42,31 +42,29 @@ CONFIG = {
     "seed": 42,
     "device": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     "synthetic": {
-        "functions": [F1],  #, F2, F3, F4, F5, F6, F7, F8, F9, F10
+        "functions": [F1, F2, F3, F4, F5, F6, F7, F8, F9, F10],
         "ground_truth" : {
-            F1: [{0,1,2}, {3}, {4,5}, {6,7,8,9}, {1,6}]
-             },
-            # ,
-            # F2: [{0,1,2}, {3}, {2,4}, {6,7,8,9}, {1,6}],
-            # F3: [{0,1}, {1,2}, {3,4,6,7}, {3}, {9}],
-            # F4: [{0,1}, {1,2}, {3,4,6,7}, {3}, {9}, {0,3}],
-            # F5: [{0,1,2}, {3,4}, {5,6}, {7,8,9}],
-            # F6: [{0,1}, {2,3}, {4,5,7}, {7,8,9}],
-            # F7: [{0,1}, {2,3,5}, {3,4,5,6,7}, {6,8}],
-            # F8: [{0,1}, {2,4,5}, {2,3,4,6}, {6,7,8}, {9}],
-            # F9: [{0,1,2,3,4}, {4,5}, {5,6,7}, {8,9}],
-            # F10: [{0,1}, {2,4,6}, {3,4}, {6,8}]
-    
-        "trials": 1,
+            F1: [{0,1,2}, {3}, {4,5}, {6,7,8,9}, {1,6}],
+            F2: [{0,1,2}, {3}, {2,4}, {6,7,8,9}, {1,6}],
+            F3: [{0,1}, {1,2}, {3,4,6,7}, {3}, {9}],
+            F4: [{0,1}, {1,2}, {3,4,6,7}, {3}, {9}, {0,3}],
+            F5: [{0,1,2}, {3,4}, {5,6}, {7,8,9}],
+            F6: [{0,1}, {2,3}, {4,5,7}, {7,8,9}],
+            F7: [{0,1}, {2,3,5}, {3,4,5,6,7}, {6,8}],
+            F8: [{0,1}, {2,4,5}, {2,3,4,6}, {6,7,8}, {9}],
+            F9: [{0,1,2,3,4}, {4,5}, {5,6,7}, {8,9}],
+            F10: [{0,1}, {2,4,6}, {3,4}, {6,8}]
+        },
+        "trials": 10,
         "l1_range": [5e-6, 1e-5, 5e-5, 1e-4, 5e-4],
         "data_points": 30000,
         "batch_size": 100
     },
-    # "real_world": {
-    #     "datasets": ["cal_housing", "bike_sharing", "higgs_boson", "letter"],
-    #     "batch_size": 256,
-    #     "l1_const": 5e-5
-    # },
+    "real_world": {
+        "datasets": ["cal_housing", "bike_sharing", "higgs_boson", "letter"],
+        "batch_size": 256,
+        "l1_const": 5e-5
+    },
     "paths": {
         "logs": "./logs",
         "results": "./results",
@@ -88,16 +86,6 @@ def setup_environment(config: Dict):
     for path in config["paths"].values():
         os.makedirs(path, exist_ok=True)
     
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(os.path.join(config["paths"]["logs"], f"experiment_{time.strftime('%Y%m%d-%H%M%S')}.log")),
-            logging.StreamHandler()
-        ]
-    )
-    
     # Set seeds
     np.random.seed(config["seed"])
     torch.manual_seed(config["seed"])
@@ -113,11 +101,8 @@ def run_synthetic_trial(func, config: Dict) -> Dict:
     try:
         # Data preparation
         X, y = generate_synthetic_data(func, config["synthetic"]["data_points"])
-        print(X, y, "points")
         Xd, Yd = preprocess_data(X, y, valid_size=10000, test_size=10000, std_scale=True)
-        print(Xd, Yd, "points_d")
         data_loaders = convert_to_torch_loaders(Xd, Yd, config["synthetic"]["batch_size"])
-        print(data_loaders, "points_d")
 
         results = {}
         
@@ -222,7 +207,6 @@ def run_synthetic_trial(func, config: Dict) -> Dict:
         return results
 
     except Exception as e:
-        logging.error(f"Trial failed for {func.__name__}: {str(e)}")
         return {"status": "failed", "error": str(e)}
 
 def run_realworld_experiment(dataset: str, config: Dict) -> Dict:
@@ -272,12 +256,11 @@ def run_realworld_experiment(dataset: str, config: Dict) -> Dict:
         cutoff_interactions = get_interactions(cutoff_weights)
         
         results["MLP_Cutoff"] = {
-            "interactions": prune_redundant_interactions(cutoff_interactions),  # Now using actual cutoff results
+            "interactions": prune_redundant_interactions(cutoff_interactions),  
             "model_state": trained_cutoff.state_dict()
         }
 
     except Exception as e:
-        logging.error(f"Failed for {dataset}: {str(e)}")
         return {"status": "failed", "error": str(e)}
 
 # ... [Keep visualization and main execution sections] ...
@@ -319,27 +302,25 @@ if __name__ == "__main__":
     results = {"synthetic": {}, "real_world": {}}
     
     # Synthetic Experiments
-    logging.info("Starting synthetic experiments")
+    print("Starting synthetic experiments")
     for func in CONFIG["synthetic"]["functions"]:
         func_results = []
         for trial in range(CONFIG["synthetic"]["trials"]):
             try:
-                logging.info(f"Running {func.__name__} trial {trial+1}/{CONFIG['synthetic']['trials']}")
+                print(f"Running {func.__name__} trial {trial+1}/{CONFIG['synthetic']['trials']}")
                 result = run_synthetic_trial(func, CONFIG)
                 func_results.append(result)
             except Exception as e:
-                logging.error(f"Trial failed for {func.__name__}: {str(e)}", exc_info=True)
+                print(f"Trial failed for {func.__name__}: {str(e)}")
             continue
 
         results["synthetic"][func.__name__] = func_results
     
     # # Real-World Experiments
-    # logging.info("\nStarting real-world experiments")
-    # for dataset in CONFIG["real_world"]["datasets"]:
-    #     logging.info(f"Processing {dataset}")
-    #     results["real_world"][dataset] = run_realworld_experiment(dataset, CONFIG)
-    
-    # Save and visualize results
+    print("\nStarting real-world experiments")
+    for dataset in CONFIG["real_world"]["datasets"]:
+        print(f"Processing {dataset}")
+        results["real_world"][dataset] = run_realworld_experiment(dataset, CONFIG)
+
     torch.save(results, os.path.join(CONFIG["paths"]["results"], "full_results.pt"))
-    # plot_results(results, CONFIG)
-    logging.info("Experiment sequence completed")
+    plot_results(results, CONFIG)
