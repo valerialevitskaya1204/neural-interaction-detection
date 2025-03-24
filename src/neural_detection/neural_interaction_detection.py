@@ -3,8 +3,8 @@ import operator
 import numpy as np
 import torch
 from torch.utils import data
-from multilayer_perceptron import *
-from utils import *
+from src.neural_detection.multilayer_perceptron import *
+from src.utils import *
 
 
 def preprocess_weights(weights):
@@ -116,7 +116,7 @@ def detect_interactions(
 
     data_loaders = convert_to_torch_loaders(Xd, Yd, batch_size)
 
-    model = create_mlp([feats.shape[1]] + arch + [1]).to(device)
+    model = create_mlp([Xd.shape[1]] + arch + [1]).to(device)
 
     model, mlp_loss = train(model, data_loaders, device=device, **kwargs)
     inters = get_interactions(get_weights(model))
