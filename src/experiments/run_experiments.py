@@ -236,7 +236,6 @@ def run_realworld_experiment(dataset: str, config: Dict) -> Dict:
         interactions = get_interactions(weights)
         results["MLP_M"] = {"interactions": interactions}
 
-        # 2. Train MLP-Cutoff
         top_interactions = [inter[0] for inter in interactions[:20]]
         cutoff_model = MLP_Cutoff(
             num_features,
@@ -261,6 +260,7 @@ def run_realworld_experiment(dataset: str, config: Dict) -> Dict:
         }
 
     except Exception as e:
+        print("Error in training real datasets", e)
         return {"status": "failed", "error": str(e)}
 
 # ... [Keep visualization and main execution sections] ...
@@ -294,33 +294,33 @@ def plot_results(results: Dict, config: Dict):
     plt.tight_layout()
     plt.savefig(os.path.join(config["paths"]["plots"], "realworld_interactions.png"))
 
-# --------------------------
-# Main Execution
-# --------------------------
-if __name__ == "__main__":
-    setup_environment(CONFIG)
-    results = {"synthetic": {}, "real_world": {}}
+# # --------------------------
+# # Main Execution
+# # --------------------------
+# if __name__ == "__main__":
+#     setup_environment(CONFIG)
+#     results = {"synthetic": {}, "real_world": {}}
     
-    # Synthetic Experiments
-    print("Starting synthetic experiments")
-    for func in CONFIG["synthetic"]["functions"]:
-        func_results = []
-        for trial in range(CONFIG["synthetic"]["trials"]):
-            try:
-                print(f"Running {func.__name__} trial {trial+1}/{CONFIG['synthetic']['trials']}")
-                result = run_synthetic_trial(func, CONFIG)
-                func_results.append(result)
-            except Exception as e:
-                print(f"Trial failed for {func.__name__}: {str(e)}")
-            continue
+#     # Synthetic Experiments
+#     print("Starting synthetic experiments")
+#     for func in CONFIG["synthetic"]["functions"]:
+#         func_results = []
+#         for trial in range(CONFIG["synthetic"]["trials"]):
+#             try:
+#                 print(f"Running {func.__name__} trial {trial+1}/{CONFIG['synthetic']['trials']}")
+#                 result = run_synthetic_trial(func, CONFIG)
+#                 func_results.append(result)
+#             except Exception as e:
+#                 print(f"Trial failed for {func.__name__}: {str(e)}")
+#             continue
 
-        results["synthetic"][func.__name__] = func_results
+#         results["synthetic"][func.__name__] = func_results
     
-    # # Real-World Experiments
-    print("\nStarting real-world experiments")
-    for dataset in CONFIG["real_world"]["datasets"]:
-        print(f"Processing {dataset}")
-        results["real_world"][dataset] = run_realworld_experiment(dataset, CONFIG)
+#     # # Real-World Experiments
+#     print("\nStarting real-world experiments")
+#     for dataset in CONFIG["real_world"]["datasets"]:
+#         print(f"Processing {dataset}")
+#         results["real_world"][dataset] = run_realworld_experiment(dataset, CONFIG)
 
-    torch.save(results, os.path.join(CONFIG["paths"]["results"], "full_results.pt"))
-    plot_results(results, CONFIG)
+#     torch.save(results, os.path.join(CONFIG["paths"]["results"], "full_results.pt"))
+#     plot_results(results, CONFIG)
