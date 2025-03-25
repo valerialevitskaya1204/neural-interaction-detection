@@ -1,9 +1,10 @@
 import torch
 from torch.utils import data
 import numpy as np
+import sklearn
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
+
 
 def set_seed(seed=42):
     np.random.seed(seed)
@@ -42,21 +43,11 @@ def preprocess_data(
     get_torch_loaders=False,
     batch_size=100,
 ):
+
     n, p = X.shape
-    
-    # Ensure sizes are integers
-    valid_size = int(valid_size)
-    test_size = int(test_size)
-    
-    # Calculate sizes and ensure they're integers
-    ntrain = int(n - valid_size - test_size)
-    nval = int(valid_size)
-    ntest = int(test_size)
-    
-    # Check if we have enough data
-    if ntrain <= 0:
-        raise ValueError(f"Not enough data for training. Total samples: {n}, requested valid: {valid_size}, test: {test_size}")
-    
+    ## Make dataset splits
+    ntrain, nval, ntest = n - valid_size - test_size, valid_size, test_size
+
     Xd = {
         "train": X[:ntrain],
         "val": X[ntrain : ntrain + nval],
@@ -68,7 +59,7 @@ def preprocess_data(
         "test": np.expand_dims(Y[ntrain + nval : ntrain + nval + ntest], axis=1),
     }
 
-    for k in list(Xd.keys()):  # Create a list of keys to avoid modification during iteration
+    for k in Xd:
         if len(Xd[k]) == 0:
             assert k != "train"
             del Xd[k]
@@ -82,8 +73,6 @@ def preprocess_data(
         scaler_y.fit(Yd["train"])
 
         for k in Xd:
-            if k in ["scaler"]:  # Skip any non-data keys
-                continue
             Xd[k] = scaler_x.transform(Xd[k])
             Yd[k] = scaler_y.transform(Yd[k])
 
@@ -92,8 +81,10 @@ def preprocess_data(
 
     if get_torch_loaders:
         return convert_to_torch_loaders(Xd, Yd, batch_size)
+
     else:
         return Xd, Yd
+
 
 def get_pairwise_auc(interactions, ground_truth):
     strengths = []
@@ -140,6 +131,11 @@ def print_rankings(pairwise_interactions, anyorder_interactions, top_k=10, spaci
     for i in range(top_k):
         p_inter, p_strength = pairwise_interactions[i]
         a_inter, a_strength = anyorder_interactions[i]
+
+
+        p_inter = tuple(x.item() for x in p_inter)
+        a_inter = tuple(x.item() for x in a_inter)
+
         print(
             justify(
                 [
@@ -156,5 +152,3 @@ def print_rankings(pairwise_interactions, anyorder_interactions, top_k=10, spaci
 
 def justify(row, spacing=14):
     return "".join(str(item).ljust(spacing) for item in row)
-
-
