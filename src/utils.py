@@ -5,6 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 
+
 def set_seed(seed=42):
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -128,6 +129,7 @@ def print_rankings(pairwise_interactions, anyorder_interactions, top_k=10, spaci
     )
     for i in range(top_k):
         p_inter, p_strength = pairwise_interactions[i]
+        print(top_k, len(anyorder_interactions))
         a_inter, a_strength = anyorder_interactions[i]
         print(
             justify(
@@ -145,5 +147,3 @@ def print_rankings(pairwise_interactions, anyorder_interactions, top_k=10, spaci
 
 def justify(row, spacing=14):
     return "".join(str(item).ljust(spacing) for item in row)
-
-
