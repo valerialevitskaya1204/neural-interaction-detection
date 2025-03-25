@@ -1,9 +1,10 @@
 import torch
 from torch.utils import data
 import numpy as np
+import sklearn
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
+
 
 
 def set_seed(seed=42):
@@ -45,6 +46,7 @@ def preprocess_data(
 ):
 
     n, p = X.shape
+    ## Make dataset splits
     ntrain, nval, ntest = n - valid_size - test_size, valid_size, test_size
 
     Xd = {
@@ -131,6 +133,11 @@ def print_rankings(pairwise_interactions, anyorder_interactions, top_k=10, spaci
         p_inter, p_strength = pairwise_interactions[i]
         print(top_k, len(anyorder_interactions))
         a_inter, a_strength = anyorder_interactions[i]
+
+
+        p_inter = tuple(x.item() for x in p_inter)
+        a_inter = tuple(x.item() for x in a_inter)
+
         print(
             justify(
                 [
