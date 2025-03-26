@@ -13,8 +13,24 @@ def set_seed(seed=42):
         torch.cuda.manual_seed(seed)
 
 
-def force_float(X_numpy):
-    return torch.from_numpy(X_numpy.astype(np.float32))
+def force_float(X):
+    """
+    Convert input (NumPy array or PyTorch tensor) to a PyTorch float32 tensor.
+    
+    Args:
+        X: Input array (NumPy array or PyTorch tensor).
+    
+    Returns:
+        torch.Tensor: A float32 tensor.
+    """
+    if isinstance(X, np.ndarray):
+        # Case 1: X is a NumPy array -> convert to torch.float32
+        return torch.from_numpy(X.astype(np.float32))
+    elif isinstance(X, torch.Tensor):
+        # Case 2: X is already a tensor -> ensure dtype is float32
+        return X.to(dtype=torch.float32)
+    else:
+        raise TypeError("Input must be a NumPy array or PyTorch tensor.")
 
 
 def convert_to_torch_loaders(Xd, Yd, batch_size):
@@ -104,6 +120,8 @@ def get_pairwise_auc(interactions, ground_truth):
 def get_anyorder_R_precision(interactions, ground_truth):
 
     R = len(ground_truth)
+    if R == 0:
+        return
     recovered_gt = []
     counter = 0
 
@@ -128,9 +146,35 @@ def print_rankings(pairwise_interactions, anyorder_interactions, top_k=10, spaci
     print(
         justify(["Pairwise interactions", "", "Arbitrary-order interactions"], spacing)
     )
-    for i in range(top_k):
-        p_inter, p_strength = pairwise_interactions[i]
-        a_inter, a_strength = anyorder_interactions[i]
+    if isinstance(pairwise_interactions, list) and len(pairwise_interactions) > 0 and isinstance(anyorder_interactions, list) and len(anyorder_interactions) > 0:
+        actual_top_k = min(
+            top_k, 
+            len(pairwise_interactions), 
+            len(anyorder_interactions)
+        )
+        for i in range(actual_top_k):
+            p_inter, p_strength = pairwise_interactions[i]
+            a_inter, a_strength = anyorder_interactions[i]
+
+
+            p_inter = tuple(x.item() for x in p_inter)
+            a_inter = tuple(x.item() for x in a_inter)
+
+            print(
+                justify(
+                    [
+                        p_inter,
+                        "{0:.4f}".format(p_strength),
+                        "",
+                        a_inter,
+                        "{0:.4f}".format(a_strength),
+                    ],
+                    spacing,
+                )
+            )
+    else:
+        p_inter, p_strength = pairwise_interactions
+        a_inter, a_strength = anyorder_interactions
 
 
         p_inter = tuple(x.item() for x in p_inter)
@@ -138,17 +182,26 @@ def print_rankings(pairwise_interactions, anyorder_interactions, top_k=10, spaci
 
         print(
             justify(
-                [
-                    p_inter,
-                    "{0:.4f}".format(p_strength),
-                    "",
-                    a_inter,
-                    "{0:.4f}".format(a_strength),
-                ],
-                spacing,
+                    [
+                        p_inter,
+                        "{0:.4f}".format(p_strength),
+                        "",
+                        a_inter,
+                        "{0:.4f}".format(a_strength),
+                    ],
+                    spacing,
+                )
             )
-        )
+
 
 
 def justify(row, spacing=14):
     return "".join(str(item).ljust(spacing) for item in row)
+
+
+
+def sanitize_tensor(tensor, nan_val=0.0, posinf=1e6, neginf=-1e6):
+        """
+        Replaces NaNs and infinities in a tensor with safe values.
+        """
+        return torch.nan_to_num(tensor, nan=nan_val, posinf=posinf, neginf=neginf)
