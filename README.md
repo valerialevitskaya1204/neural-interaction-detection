@@ -41,7 +41,8 @@ Explore `demo.ipynb` to run:
 Preconfigured experiments are located in `arc/experiments/`. To reproduce:
 ```python
 # Example: Run synthetic dataset experiment
-python arc/experiments/synthetic_experiment.py  
+python arc/experiments/synthetic_experiment.py
+   
 # Example: Run synthetic dataset experiment  
 python arc/experiments/real_experiment.py
 ```
