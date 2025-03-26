@@ -1,4 +1,4 @@
-```markdown
+
 # Neural Interaction Detection (NID) 
 **Project from ML Course - Skoltech 2025**
 
