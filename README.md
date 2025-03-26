@@ -1,28 +1,57 @@
-# Neural Interaction Detection (NID)
-
+```markdown
+# Neural Interaction Detection (NID) 
+**Project from ML Course - Skoltech 2025**
 
 ![Algorithm](figures/algorithm.gif)
 
+This repository implements Neural Interaction Detection (NID), a method to detect statistical interactions from neural network weights, based on the ICLR 2018 paper by Tsang et al. [[PDF]](https://openreview.net/pdf?id=ByOfBggRZ)
 
-[M. Tsang](http://www-scf.usc.edu/~tsangm/), [D. Cheng](http://www-scf.usc.edu/~dehuache/), [Y. Liu](http://www-bcf.usc.edu/~liu32/). Detecting Statistical Interactions from Neural Network Weights, ICLR 2018. [[pdf]](https://openreview.net/pdf?id=ByOfBggRZ)
+## Table of Contents
+- [Installation](#installation)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Experiments](#experiments)
+- [Plotting](#plotting)
+- [Citation](#citation)
 
-
-## Usage
-
-
-- Run the demo at "demo.ipynb"
-	* the demo trains a multilayer perceptron (MLP) on synthetic data containing interactions with nonlinearities. at the end of the notebook the interactions are found by decoding the learned weights 
-- requires python 3.6+ and jupyter notebook, tested with pytorch 1.3.1, scikit-learn 0.21.3, numpy 1.17.1
-
-
-## Reproducibility
-If you need to reproduce paper results, please contact me so I can share the original code used for experiments (in Tensorflow). Email: tsangm at usc dot edu
-
-
-## Reference
-If you use NID in your research, please cite the following:
-
+## Installation
+```bash
+pip install -r requirements.txt
 ```
+
+## Project Structure
+```
+├── arc/experiments/          # Scripts for experimental setups
+├── datasets/                 # Synthetic (with ground truth) and real-world datasets
+├── neural_detection/         # Core algorithm implementation
+│   └── multilayer_perceptron/
+├── src/plots/                # Generated plots and visualization scripts
+├── demo.ipynb                # Jupyter notebook with key experiments
+├── draw_smth.py              # Plotting utilities
+└── requirements.txt          # Python dependencies
+```
+
+## Getting Started
+Explore `demo.ipynb` to run:
+1. **Synthetic Function Experiments**: Validate NID on functions with known interactions.
+2. **F11-F12 Tests**: Verify interaction detection on pseudo-IID features.
+3. **Correlated Features Analysis**: Test performance on cloned/correlated features.
+
+## Experiments
+Preconfigured experiments are located in `arc/experiments/`. To reproduce:
+```python
+# Example: Run synthetic dataset experiment
+python arc/experiments/synthetic_experiment.py
+```
+
+## Plotting
+Visualization scripts are in `draw_smth.py`. Generated plots are saved to `src/plots/`:
+```python
+python draw_smth.py  # Customize plotting parameters as needed
+```
+
+## Citation
+```bibtex
 @article{tsang2017detecting,
   title={Detecting statistical interactions from neural network weights},
   author={Tsang, Michael and Cheng, Dehua and Liu, Yan},
@@ -31,3 +60,7 @@ If you use NID in your research, please cite the following:
 }
 ```
 
+
+###### Acknowledgements
+This implementation is based on the original work by M. Tsang, D. Cheng, and Y. Liu. Developed for educational purposes in the Skoltech 2025 Machine Learning course.
+```
