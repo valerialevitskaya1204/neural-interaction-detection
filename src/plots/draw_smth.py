@@ -30,7 +30,6 @@ def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="s
 
     plt.figure(figsize=(12, 10))
 
-    matrix = min_max_scale(matrix)
 
     sns.heatmap(
         matrix,
@@ -39,8 +38,8 @@ def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="s
         cmap='coolwarm',
         xticklabels=labels,
         yticklabels=labels,
-        vmin=0,
-        vmax=1
+        vmin=matrix.min(),
+        vmax=matrix.max()
     )
     
     plt.title(f'Pairwise Interactions for {func_name}')
@@ -154,7 +153,7 @@ def draw_heatmap_real_data(pairwise_interactions, dataset_name, feature_names=No
 
 
 
-def plot_metrics_mult(metrics_dict, save_path=None):
+def plot_metrics_mult(metrics_dict, save_path="src/plots/mult_corr.png"):
     """
     Plot AUC and R-Precision metrics for multicollinearity analysis
     
@@ -207,5 +206,20 @@ def plot_metrics_mult(metrics_dict, save_path=None):
     plt.tight_layout()
     
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path)
+    plt.show()
+
+
+def plot_str_against_n(n_clones_list, p_strengths, a_strengths, task="correlation"):
+    save_path=f"src/plots/mult_corr_strength_{task}.png"
+    plt.figure(figsize=(10, 6))
+    plt.plot(n_clones_list, p_strengths, marker='o', label='Pairwise Interaction Strength')
+    plt.plot(n_clones_list, a_strengths, marker='s', label='Arbitrary-order Interaction Strength')
+    plt.xlabel('Number of Clones (n)')
+    plt.ylabel('Average Interaction Strength')
+    plt.title('Interaction Strength vs. Number of Clones')
+    plt.legend()
+    plt.grid(True)
+    if save_path:
+        plt.savefig(save_path)
     plt.show()
