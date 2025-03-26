@@ -2,10 +2,12 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
+from pathlib import Path
 
-def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="src/plots"):
+def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="../src/plots/synthetic_data_heatmap"):
     """Visualize pairwise interactions as a heatmap."""
-    os.makedirs(save_dir, exist_ok=True)
+    path = Path(save_dir)
+    path.mkdir(parents=True, exist_ok=True)
     matrix = np.zeros((num_features, num_features))
     
     for (i, j), value in pairwise_interactions:
@@ -33,12 +35,19 @@ def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="s
     plt.ylabel('Features')
     plt.tight_layout()
     
-    plt.savefig(os.path.join(f'src/plots/{func_name}_heatmap.png'))
+    plt.savefig(os.path.join(f'{save_dir}/{func_name}_heatmap.png'))
     plt.close()
 
 
 
-def plot_metrics(metrics_dict, save_path="src/plots/metrics_plot.png"):
+def plot_metrics(metrics_dict, task="synth"):
+    if task == "synth":
+        save_path= "src/plots/synthetic_data_metrics"
+    else:
+        save_path= "src/plots/real_data_metrics"
+        
+    path = Path(save_path)
+    path.mkdir(parents=True, exist_ok=True)
     """Plot AUC and R-precision metrics for all functions"""
     plt.figure(figsize=(10, 6))
     
@@ -63,7 +72,7 @@ def plot_metrics(metrics_dict, save_path="src/plots/metrics_plot.png"):
     add_labels(r_prec_bars)
     
     plt.tight_layout()
-    plt.savefig(save_path)
+    plt.savefig(path)
     plt.show()
     plt.close()
 
@@ -77,10 +86,23 @@ def add_labels(bars):
                          textcoords="offset points",
                          ha='center', va='bottom')
         
+        
+def min_max_scale(data):
+    min_vals = data.min(axis=0)  # Minimum of each column
+    max_vals = data.max(axis=0)  # Maximum of each column
+    range_vals = max_vals - min_vals  # Range of each column
+    
+    # Handle case where range is zero (same values across the column)
+    range_vals[range_vals == 0] = 1  # Avoid division by zero by setting the range to 1 where max = min
+    
+    scaled_data = (data - min_vals) / range_vals
+    return scaled_data
+        
 
-def draw_heatmap_real_data(pairwise_interactions, dataset_name, feature_names=None):
+def draw_heatmap_real_data(pairwise_interactions, dataset_name, feature_names=None, save_dir="/workspace/kate/neural-interaction-detection/src/plots/real_data_heatmap"):
     """Visualize pairwise interactions for real datasets without ground truth"""
-    os.makedirs("real_data_heatmaps", exist_ok=True)
+    path = Path(save_dir)
+    path.mkdir(parents=True, exist_ok=True)
     
     num_features = len(pairwise_interactions)
     matrix = np.zeros((num_features, num_features))
@@ -90,6 +112,8 @@ def draw_heatmap_real_data(pairwise_interactions, dataset_name, feature_names=No
         j_idx = int(j) - 1
         matrix[i_idx, j_idx] = value
         matrix[j_idx, i_idx] = value 
+        
+    matrix = min_max_scale(matrix)
 
     labels = feature_names if feature_names else [f'Feature {i+1}' for i in range(num_features)]
 
@@ -110,5 +134,7 @@ def draw_heatmap_real_data(pairwise_interactions, dataset_name, feature_names=No
     plt.ylabel('Features')
     plt.tight_layout()
     
-    plt.savefig(f'src/plots/real_data_heatmaps/{dataset_name}_heatmap.png')
+    path_save = Path(f'{save_dir}/{dataset_name}_heatmap.png')
+    
+    plt.savefig(path_save)
     plt.close()
