@@ -27,6 +27,12 @@ def handle_errors(func):
 
     return wrapper
 
+def encode_target(df, col_name):
+    classes = set[df[col_name]]
+    df = df.copy()
+    df[col_name] = df[col_name].astype('category').cat.codes
+
+    return df
 
 @handle_errors
 def load_real_dataset(dataset_name):
@@ -58,7 +64,7 @@ def load_real_dataset(dataset_name):
             X = df.iloc[:, 1:].values
         case _:
             print("Going to another func...")
-            load_new_dataset(dataset_name)
+            X, Y = load_new_dataset(dataset_name)
 
     return X, Y
 
@@ -68,7 +74,7 @@ def load_new_dataset(dataset_name):
     match dataset_name:
         case "parkinsons":
             parkinsons_telemonitoring = fetch_ucirepo(id=189)
-            X1 = parkinsons_telemonitoring.data.features
+            X = parkinsons_telemonitoring.data.features
             X = X.drop(
                 ["age", "sex"], axis=1
             )
@@ -79,8 +85,14 @@ def load_new_dataset(dataset_name):
             image_segmentation = fetch_ucirepo(id=50)
 
             X = image_segmentation.data.features
+            print(X.shape)
             X = digits_only(X)
+            X.to_csv('X.csv')
             Y = image_segmentation.data.targets
+            print(Y.shape)
+            Y = encode_target(image_segmentation.data.targets, "class")
+            print(Y.shape)
+            Y.to_csv('Y.csv')
 
         case "robots":
             url = "http://archive.ics.uci.edu/static/public/963/ur3+cobotops.zip"
@@ -89,6 +101,9 @@ def load_new_dataset(dataset_name):
             zipfile = ZipFile(BytesIO(response.content))
             with zipfile.open("dataset_02052023.xlsx") as f:
                 df = pd.read_excel(f)
+
+            df = df.dropna()
+            print(len(df))
 
             Y = df["grip_lost"].astype(int)
             X = df.drop(
@@ -103,7 +118,7 @@ def load_new_dataset(dataset_name):
                 ["Date", "Seasons", "Holiday"], axis=1
             )
             X = digits_only(X)
-            Y = seoul_bike_sharing_demand.data.targets
+            Y = encode_target(seoul_bike_sharing_demand.data.targets, "Functioning Day")
             
         case _:
             load_real_dataset(dataset_name)

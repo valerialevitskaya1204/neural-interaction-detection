@@ -3,6 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 from pathlib import Path
+from matplotlib.colors import LogNorm
 
 def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="../src/plots/synthetic_data_heatmap"):
     """Visualize pairwise interactions as a heatmap."""
@@ -99,13 +100,14 @@ def min_max_scale(data):
     return scaled_data
         
 
-def draw_heatmap_real_data(pairwise_interactions, dataset_name, feature_names=None, save_dir="/workspace/kate/neural-interaction-detection/src/plots/real_data_heatmap"):
+def draw_heatmap_real_data(pairwise_interactions, dataset_name, num_feat, feature_names=None, save_dir="/workspace/kate/neural-interaction-detection/src/plots/real_data_heatmap"):
     """Visualize pairwise interactions for real datasets without ground truth"""
     path = Path(save_dir)
     path.mkdir(parents=True, exist_ok=True)
     
-    num_features = len(pairwise_interactions)
+    num_features = num_feat
     matrix = np.zeros((num_features, num_features))
+    mask = np.triu(np.ones_like(matrix, dtype=bool), k=0)
     
     for (i, j), value in pairwise_interactions:
         i_idx = int(i) - 1  
@@ -113,25 +115,49 @@ def draw_heatmap_real_data(pairwise_interactions, dataset_name, feature_names=No
         matrix[i_idx, j_idx] = value
         matrix[j_idx, i_idx] = value 
         
-    matrix = min_max_scale(matrix)
+    # matrix = min_max_scale(matrix)
 
-    labels = feature_names if feature_names else [f'Feature {i+1}' for i in range(num_features)]
+    labels = feature_names if feature_names else [f'{i+1}' for i in range(num_features)]
+    print()
 
-    plt.figure(figsize=(12, 10))
-    sns.heatmap(
-        matrix,
-        annot=True,
-        fmt=".2f",
-        cmap='coolwarm',
-        xticklabels=labels,
-        yticklabels=labels,
-        vmin=0,
-        vmax=1
-    )
-    
-    plt.title(f'Learned Pairwise Interactions for {dataset_name}')
-    plt.xlabel('Features')
-    plt.ylabel('Features')
+    if dataset_name == "seoul_bikes":
+
+        plt.figure(figsize=(12, 10))
+        ax = sns.heatmap(
+            matrix,
+            mask=mask,
+            vmin=matrix.min(),
+            vmax=matrix.max(),
+            annot=False,
+            fmt=".2f",
+            square=True,
+            norm=LogNorm(),
+            cmap='coolwarm',
+            xticklabels=labels,
+            yticklabels=labels,
+            cbar=False,
+        )
+    else:
+        plt.figure(figsize=(12, 10))
+        ax = sns.heatmap(
+            matrix,
+            mask=mask,
+            vmin=matrix.min(),
+            vmax=matrix.max(),
+            annot=False,
+            fmt=".2f",
+            square=True,
+            # norm=LogNorm(),
+            cmap='coolwarm',
+            xticklabels=labels,
+            yticklabels=labels,
+            cbar=False,
+        )
+
+    # Increase font sizes
+    ax.set_xticklabels(ax.get_xticklabels(), fontsize=18)
+    ax.set_yticklabels(ax.get_yticklabels(), fontsize=18)
+
     plt.tight_layout()
     
     path_save = Path(f'{save_dir}/{dataset_name}_heatmap.png')

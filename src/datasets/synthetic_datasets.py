@@ -123,7 +123,7 @@ def F7(X):
     part5 = torch.sum(X, dim=1)
 
     result = part1 + part2 + part3 + part4 + part5
-    ground_truth = [{4, 5, 6, 7, 8}, {7, 9}]
+    ground_truth = [{1, 2}, {3, 4}, {4, 5, 6, 7, 8}, {7, 9}]
     return result, ground_truth
 
 
