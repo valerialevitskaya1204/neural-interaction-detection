@@ -21,7 +21,7 @@ pip install -r requirements.txt
 
 ## Project Structure
 ```
-├── arc/experiments/          # Scripts for experimental setups
+├── src/experiments/          # Scripts for experimental setups
 ├── datasets/                 # Synthetic (with ground truth) and real-world datasets
 ├── neural_detection/         # Core algorithm implementation
 │   └── multilayer_perceptron/
