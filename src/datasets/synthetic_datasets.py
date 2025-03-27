@@ -17,9 +17,6 @@ def handle_errors(func):
     return wrapper
 
 
-# Full set of F1-F12 functions, NaN-safe and formatted as requested
-
-
 def F1(X):
     X1, X2, X3, X4, X5, X6, X7, X8, X9, X10 = X.transpose(0, 1)
 
@@ -123,7 +120,7 @@ def F7(X):
     part5 = torch.sum(X, dim=1)
 
     result = part1 + part2 + part3 + part4 + part5
-    ground_truth = [{1, 2}, {3, 4}, {4, 5, 6, 7, 8}, {7, 9}]
+    ground_truth = [{4, 5, 6, 7, 8}, {7, 9}]
     return result, ground_truth
 
 
@@ -178,4 +175,6 @@ def F11(X):
 
 def F12(X):
     ground_truth = [{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}]
-    return torch.prod(X, dim=1)  # All features interact
+    return torch.prod(X, dim=1), ground_truth  # All features interact
+
+

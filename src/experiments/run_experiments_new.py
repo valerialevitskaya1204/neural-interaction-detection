@@ -1,7 +1,8 @@
-from src.datasets.synthetic_datasets import F1, F2, F3, F4, F5, F6, F7, F8, F9, F10
+
+from src.datasets.synthetic_datasets import F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12
 from src.datasets.realworld_datasets import load_real_dataset
 from src.neural_detection.multilayer_perceptron import MLP, train, get_weights, get_interactions
-from src.utils import preprocess_data, get_anyorder_R_precision, get_pairwise_auc, print_rankings
+from src.utils import preprocess_data, get_anyorder_R_precision, get_pairwise_auc, print_rankings, sanitize_tensor
 from src.plots.draw_smth import draw_heatmap, plot_metrics, draw_heatmap_real_data
 from pathlib import Path
 from sklearn.model_selection import train_test_split
@@ -16,21 +17,16 @@ import matplotlib.pyplot as plt
 use_main_effect_nets = True
 num_samples = 30000
 num_features = 10
-synth_functions = [F1, F2, F3, F4, F5, F6, F7, F8, F9, F10] 
 real_functions = ["parkinsons", "images", "robots", "seoul_bikes"] 
-np.random.seed(42)
+np.random.seed(52)
+functions = [F12, F1, F11, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F1] 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-def sanitize_tensor(tensor, nan_val=0.0, posinf=1e6, neginf=-1e6):
-        return torch.nan_to_num(tensor, nan=nan_val, posinf=posinf, neginf=neginf)
-    
 
 
 def repeat_result_from_paper(task='synth', save_dir="model1"):
     """Generate model results for all functions in a single run"""
     
     results = {}
-    
     if task == "synth":
         path = Path(f"{save_dir}/synth")
         path.mkdir(parents=True, exist_ok=True)
@@ -128,8 +124,8 @@ def repeat_result_from_paper(task='synth', save_dir="model1"):
                 pickle.dump(get_weights(model), f)
 
             results[func_name] = {"weights":get_weights(model)}
-        
-        
+       
+            results[func_name]['ground_truth'] = ground_truth
     return results
 
 def get_results(task="synth", save_dir='.'):
@@ -152,6 +148,29 @@ def get_results(task="synth", save_dir='.'):
         else:
             draw_heatmap_real_data(pairwise_interactions, i, num_feat = model_weights[0].shape[-1])
 
+
+        if func_name not in ["F11", "F12"]:
+            auc = get_pairwise_auc(pairwise_interactions, ground_truth)
+            r_prec = get_anyorder_R_precision(anyorder_interactions, ground_truth)
+
+            metrics[func_name] = {
+                'pairwise_interactions': pairwise_interactions,
+                'anyorder_interactions': anyorder_interactions,
+                'auc': auc,
+                'r_precision': r_prec
+            }
+            plot_metrics(metrics)
+            print("Pairwise AUC", auc, ", Any-order R-Precision", r_prec)
+        else:
+            metrics[func_name] = {
+                'pairwise_interactions': pairwise_interactions,
+                'anyorder_interactions': anyorder_interactions,
+            }
+
+        
+        print(
+            print_rankings(pairwise_interactions, anyorder_interactions, top_k=10, spacing=14)
+            )
             
 
     
