@@ -38,19 +38,13 @@ Explore `demo.ipynb` to run:
 3. **Correlated Features Analysis**: Test performance on cloned/correlated features.
 
 ## Experiments
-Preconfigured experiments are located in `arc/experiments/`. To reproduce:
-```python
-# Example: Run synthetic dataset experiment
-python arc/experiments/synthetic_experiment.py
-   
-# Example: Run synthetic dataset experiment  
-python arc/experiments/real_experiment.py
-```
+Preconfigured experiments are located in `src/experiments/`. To reproduce:
+Use demo.ipynb 
 
 ## Plotting
 Visualization scripts are in `draw_smth.py`. Generated plots are saved to `src/plots/`:
 ```python
-python draw_smth.py  # Customize plotting parameters as needed
+python draw_smth.py  
 ```
 
 ## Citation
