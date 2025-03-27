@@ -6,6 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import roc_auc_score
 
 
+
 def set_seed(seed=42):
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -283,8 +284,6 @@ def print_rankings(pairwise_interactions, anyorder_interactions, top_k=10, spaci
 def justify(row, spacing=14):
     return "".join(str(item).ljust(spacing) for item in row)
 
-
-
 def sanitize_tensor(tensor, nan_val=0.0, posinf=1e6, neginf=-1e6):
         """
         Replaces NaNs and infinities in a tensor with safe values.
@@ -316,3 +315,4 @@ def get_strength(pairwise_interactions, anyorder_interactions, top_k=10):
         p_inter = tuple(x.item() for x in p_inter)
         a_inter = tuple(x.item() for x in a_inter)
     return p_inter, p_strength, a_strength, a_inter
+

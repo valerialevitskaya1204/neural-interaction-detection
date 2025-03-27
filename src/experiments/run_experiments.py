@@ -20,12 +20,12 @@ CONFIG = {
         "trials": 2,
         "l1_range": [5e-6],
         "data_points": 30000,
-        "batch_size": 100
+        "batch_size": 100,
     },
     "real_world": {
         "datasets": ["cal_housing", "bike_sharing", "higgs_boson", "letter"],
         "batch_size": 256,
-        "l1_const": 5e-5
+        "l1_const": 5e-5,
     },
     "paths": {
         "logs": "./logs",
@@ -49,8 +49,12 @@ def run_synthetic_trial(func, config: Dict) -> Dict:
     try:
         os.makedirs("saved_models_new", exist_ok=True)
         X, y = generate_synthetic_data(func, config["synthetic"]["data_points"])
-        Xd, Yd = preprocess_data(X, y, valid_size=10000, test_size=10000, std_scale=True)
-        data_loaders = convert_to_torch_loaders(Xd, Yd, config["synthetic"]["batch_size"])
+        Xd, Yd = preprocess_data(
+            X, y, valid_size=10000, test_size=10000, std_scale=True
+        )
+        data_loaders = convert_to_torch_loaders(
+            Xd, Yd, config["synthetic"]["batch_size"]
+        )
 
         results = {}
         
@@ -73,9 +77,10 @@ def run_synthetic_trial(func, config: Dict) -> Dict:
                     use_main_effect_nets=use_me,
                     main_effect_net_units=me_units
                 ).to(config["device"])
-                
+
                 _, val_loss = train(
-                    model, data_loaders,
+                    model,
+                    data_loaders,
                     l1_const=l1,
                     nepochs=config["training"]["epochs"],
                     device=config["device"])
@@ -88,9 +93,10 @@ def run_synthetic_trial(func, config: Dict) -> Dict:
                 use_main_effect_nets=use_me,
                 main_effect_net_units=me_units
             ).to(config["device"])
-            
+
             trained_model, _ = train(
-                model, data_loaders,
+                model,
+                data_loaders,
                 l1_const=best_l1,
                 nepochs=config["training"]["epochs"],
                 device=config["device"])
@@ -116,9 +122,9 @@ def run_synthetic_trial(func, config: Dict) -> Dict:
         cutoff_model = MLP_Cutoff(
             num_features=10,
             interaction_list=top_interactions,
-            hidden_units=[140, 100, 60, 20]
+            hidden_units=[140, 100, 60, 20],
         ).to(config["device"])
-        
+
         trained_cutoff, _ = train(
             cutoff_model, data_loaders,
             l2_const=1e-4,
@@ -140,13 +146,16 @@ def run_synthetic_trial(func, config: Dict) -> Dict:
     except Exception as e:
         return {"status": "failed", "error": str(e)}
 
+
 def run_realworld_experiment(dataset: str, config: Dict) -> Dict:
     try:
         os.makedirs("saved_models_new", exist_ok=True)
         X, y = load_real_dataset(dataset)
         Xd, Yd = preprocess_data(X, y, valid_size=0.1, test_size=0.1, std_scale=True)
-        data_loaders = convert_to_torch_loaders(Xd, Yd, config["real_world"]["batch_size"])
-        
+        data_loaders = convert_to_torch_loaders(
+            Xd, Yd, config["real_world"]["batch_size"]
+        )
+
         results = {}
         num_features = X.shape[1]
 
@@ -156,9 +165,10 @@ def run_realworld_experiment(dataset: str, config: Dict) -> Dict:
             use_main_effect_nets=True,
             main_effect_net_units=[10, 10, 10]
         ).to(config["device"])
-        
+
         trained_mlp_m, _ = train(
-            mlp_m, data_loaders,
+            mlp_m,
+            data_loaders,
             l1_const=config["real_world"]["l1_const"],
             nepochs=config["training"]["epochs"],
             device=config["device"])
@@ -174,11 +184,12 @@ def run_realworld_experiment(dataset: str, config: Dict) -> Dict:
         cutoff_model = MLP_Cutoff(
             num_features,
             interaction_list=top_interactions,
-            hidden_units=[140, 100, 60, 20]
+            hidden_units=[140, 100, 60, 20],
         ).to(config["device"])
-        
+
         trained_cutoff, _ = train(
-            cutoff_model, data_loaders,
+            cutoff_model,
+            data_loaders,
             l2_const=1e-4,
             nepochs=config["training"]["epochs"],
             device=config["device"])
@@ -186,10 +197,10 @@ def run_realworld_experiment(dataset: str, config: Dict) -> Dict:
         torch.save({'model_state_dict': trained_cutoff.state_dict()}, mlp_cutoff_path)
         cutoff_weights = get_weights(trained_cutoff)
         cutoff_interactions = get_interactions(cutoff_weights)
-        
+
         results["MLP_Cutoff"] = {
-            "interactions": prune_redundant_interactions(cutoff_interactions),  
-            "model_state": trained_cutoff.state_dict()
+            "interactions": prune_redundant_interactions(cutoff_interactions),
+            "model_state": trained_cutoff.state_dict(),
         }
 
     except Exception as e:

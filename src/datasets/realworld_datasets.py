@@ -8,6 +8,12 @@ from sklearn.datasets import fetch_california_housing
 from ucimlrepo import fetch_ucirepo
 
 
+def digits_only(df):
+    categorical_columns = df.select_dtypes(include=['object', 'category']).columns
+    df_cleaned = df.drop(columns=categorical_columns)
+    
+    return df_cleaned
+
 def handle_errors(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -21,6 +27,12 @@ def handle_errors(func):
 
     return wrapper
 
+def encode_target(df, col_name):
+    classes = set[df[col_name]]
+    df = df.copy()
+    df[col_name] = df[col_name].astype('category').cat.codes
+
+    return df
 
 @handle_errors
 def load_real_dataset(dataset_name):
@@ -33,22 +45,26 @@ def load_real_dataset(dataset_name):
             zipfile = ZipFile(BytesIO(response.content))
             with zipfile.open("day.csv") as f:
                 df = pd.read_csv(f)
+                df = digits_only(df)
             Y = df["cnt"].values
             X = df.drop(
-                ["instant", "dteday", "cnt", "casual", "registered"], axis=1
+                ["cnt"], axis=1
             ).values
         case "higgs_boson":
             url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00280/HIGGS.csv.gz"
             df = pd.read_csv(url, compression="gzip", header=None)
+            df = digits_only(df)
             Y = df.iloc[:, 0].values
             X = df.iloc[:, 1:].values
         case "letter":
             url = "http://archive.ics.uci.edu/ml/machine-learning-databases/letter-recognition/letter-recognition.data"
             df = pd.read_csv(url, header=None)
+            df = digits_only(df)
             Y = df.iloc[:, 0].values
             X = df.iloc[:, 1:].values
         case _:
-            raise ValueError(f"Unknown dataset: {dataset_name}")
+            print("Going to another func...")
+            X, Y = load_new_dataset(dataset_name)
 
     return X, Y
 
@@ -58,16 +74,25 @@ def load_new_dataset(dataset_name):
     match dataset_name:
         case "parkinsons":
             parkinsons_telemonitoring = fetch_ucirepo(id=189)
-            X = parkinsons_telemonitoring.data.features.drop(
-                ["subject", "age", "sex"], axis=1
+            X = parkinsons_telemonitoring.data.features
+            X = X.drop(
+                ["age", "sex"], axis=1
             )
+            X = digits_only(X)
             Y = parkinsons_telemonitoring.data.targets.drop(["motor_UPDRS"], axis=1)
 
         case "images":
             image_segmentation = fetch_ucirepo(id=50)
 
             X = image_segmentation.data.features
+            print(X.shape)
+            X = digits_only(X)
+            X.to_csv('X.csv')
             Y = image_segmentation.data.targets
+            print(Y.shape)
+            Y = encode_target(image_segmentation.data.targets, "class")
+            print(Y.shape)
+            Y.to_csv('Y.csv')
 
         case "robots":
             url = "http://archive.ics.uci.edu/static/public/963/ur3+cobotops.zip"
@@ -77,18 +102,26 @@ def load_new_dataset(dataset_name):
             with zipfile.open("dataset_02052023.xlsx") as f:
                 df = pd.read_excel(f)
 
+            df = df.dropna()
+            print(len(df))
+
             Y = df["grip_lost"].astype(int)
             X = df.drop(
                 ["Num", "Timestamp", "cycle ", "grip_lost", "Robot_ProtectiveStop"],
                 axis=1,
             )
+            X = digits_only(X)
         case "seoul_bikes":
             seoul_bike_sharing_demand = fetch_ucirepo(id=560)
 
             X = seoul_bike_sharing_demand.data.features.drop(
                 ["Date", "Seasons", "Holiday"], axis=1
             )
-            Y = seoul_bike_sharing_demand.data.targets
+            X = digits_only(X)
+            Y = encode_target(seoul_bike_sharing_demand.data.targets, "Functioning Day")
+            
+        case _:
+            load_real_dataset(dataset_name)
     return X, Y
 
 

@@ -274,3 +274,25 @@ def prune_redundant_interactions(interaction_ranking, max_interactions=100):
 
     return interaction_ranking_pruned
 
+
+def detect_interactions(
+    Xd,
+    Yd,
+    arch=[256, 128, 64],
+    batch_size=100,
+    device=torch.device("cpu"),
+    seed=None,
+    **kwargs
+):
+
+    if seed is not None:
+        set_seed(seed)
+
+    data_loaders = convert_to_torch_loaders(Xd, Yd, batch_size)
+
+    model = create_mlp([Xd.shape[1]] + arch + [1]).to(device)
+
+    model, mlp_loss = train(model, data_loaders, device=device, **kwargs)
+    inters = get_interactions(get_weights(model))
+
+    return inters, mlp_loss

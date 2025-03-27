@@ -2,22 +2,23 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
+from pathlib import Path
+from matplotlib.colors import LogNorm
 
 def min_max_scale(data):
-    min_vals = data.min(axis=0)  # Minimum of each column
-    max_vals = data.max(axis=0)  # Maximum of each column
-    range_vals = max_vals - min_vals  # Range of each column
-    
-    # Handle case where range is zero (same values across the column)
-    range_vals[range_vals == 0] = 1  # Avoid division by zero by setting the range to 1 where max = min
+    min_vals = data.min(axis=0)
+    max_vals = data.max(axis=0) 
+    range_vals = max_vals - min_vals
+   
+    range_vals[range_vals == 0] = 1  
     
     scaled_data = (data - min_vals) / range_vals
     return scaled_data
 
-
 def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="src/plots"):
     """Visualize pairwise interactions as a heatmap."""
-    os.makedirs(save_dir, exist_ok=True)
+    path = Path(save_dir)
+    path.mkdir(parents=True, exist_ok=True)
     matrix = np.zeros((num_features, num_features))
     
     for (i, j), value in pairwise_interactions:
@@ -47,18 +48,15 @@ def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="s
     plt.ylabel('Features')
     plt.tight_layout()
     
-    plt.savefig(os.path.join(f'src/plots/{func_name}_heatmap.png'))
+    plt.savefig(os.path.join(f'{save_dir}/{func_name}_heatmap.png'))
     plt.close()
 
 
 def plot_metrics(metrics_dict, save_path="src/plots/metrics_plot.png"):
     """Plot AUC and R-precision metrics for all functions"""
     plt.figure(figsize=(10, 6))
-    
-    # Filter out F11 and F12 if they exist
     func_names = [name for name in metrics_dict.keys() if name not in ["F11", "F12"]]
-    
-    # Get scores, filtering out None values but keeping track of which functions have valid scores
+
     auc_scores = []
     r_prec_scores = []
     valid_func_names = []
@@ -73,15 +71,13 @@ def plot_metrics(metrics_dict, save_path="src/plots/metrics_plot.png"):
     
     x = np.arange(len(valid_func_names))
     width = 0.35
-    
-    # Plot AUC scores if available
+
     if any(score is not None for score in auc_scores):
         auc_bars = plt.bar(x - width/2, [s if s is not None else 0 for s in auc_scores], 
                           width, label='AUC', color='royalblue')
     else:
         auc_bars = None
     
-    # Plot R-precision scores if available
     if any(score is not None for score in r_prec_scores):
         r_prec_bars = plt.bar(x + width/2, [s if s is not None else 0 for s in r_prec_scores], 
                              width, label='R-Precision', color='lightcoral')
@@ -100,7 +96,7 @@ def plot_metrics(metrics_dict, save_path="src/plots/metrics_plot.png"):
         add_labels(r_prec_bars)
         
     plt.tight_layout()
-    plt.savefig(save_path)
+    plt.savefig(path)
     plt.show()
     plt.close()
         
@@ -115,39 +111,73 @@ def add_labels(bars):
                          textcoords="offset points",
                          ha='center', va='bottom')
         
+       
+        
 
-def draw_heatmap_real_data(pairwise_interactions, dataset_name, feature_names=None):
+def draw_heatmap_real_data(pairwise_interactions, dataset_name, num_feat, feature_names=None, save_dir="/workspace/kate/neural-interaction-detection/src/plots/real_data_heatmap"):
     """Visualize pairwise interactions for real datasets without ground truth"""
-    os.makedirs("real_data_heatmaps", exist_ok=True)
+    path = Path(save_dir)
+    path.mkdir(parents=True, exist_ok=True)
     
-    num_features = len(pairwise_interactions)
+    num_features = num_feat
     matrix = np.zeros((num_features, num_features))
+    mask = np.triu(np.ones_like(matrix, dtype=bool), k=0)
     
     for (i, j), value in pairwise_interactions:
         i_idx = int(i) - 1  
         j_idx = int(j) - 1
         matrix[i_idx, j_idx] = value
         matrix[j_idx, i_idx] = value 
+        
+    # matrix = min_max_scale(matrix)
 
-    labels = feature_names if feature_names else [f'Feature {i+1}' for i in range(num_features)]
+    labels = feature_names if feature_names else [f'{i+1}' for i in range(num_features)]
+    print()
 
-    plt.figure(figsize=(12, 10))
-    sns.heatmap(
-        matrix,
-        annot=True,
-        fmt=".2f",
-        cmap='coolwarm',
-        xticklabels=labels,
-        yticklabels=labels,
-        vmin=0,
-        vmax=1
-    )
-    
-    plt.title(f'Learned Pairwise Interactions for {dataset_name}')
-    plt.xlabel('Features')
-    plt.ylabel('Features')
+    if dataset_name == "seoul_bikes":
+
+        plt.figure(figsize=(12, 10))
+        ax = sns.heatmap(
+            matrix,
+            mask=mask,
+            vmin=matrix.min(),
+            vmax=matrix.max(),
+            annot=False,
+            fmt=".2f",
+            square=True,
+            norm=LogNorm(),
+            cmap='coolwarm',
+            xticklabels=labels,
+            yticklabels=labels,
+            cbar=False,
+        )
+    else:
+        plt.figure(figsize=(12, 10))
+        ax = sns.heatmap(
+            matrix,
+            mask=mask,
+            vmin=matrix.min(),
+            vmax=matrix.max(),
+            annot=False,
+            fmt=".2f",
+            square=True,
+            # norm=LogNorm(),
+            cmap='coolwarm',
+            xticklabels=labels,
+            yticklabels=labels,
+            cbar=False,
+        )
+
+    # Increase font sizes
+    ax.set_xticklabels(ax.get_xticklabels(), fontsize=18)
+    ax.set_yticklabels(ax.get_yticklabels(), fontsize=18)
+
     plt.tight_layout()
     
+    path_save = Path(f'{save_dir}/{dataset_name}_heatmap.png')
+    
+    plt.savefig(path_save)
+    plt.close()
     plt.savefig(f'src/plots/real_data_heatmaps/{dataset_name}_heatmap.png')
     plt.close()
 
@@ -163,16 +193,13 @@ def plot_metrics_mult(metrics_dict, save_path="src/plots/mult_corr.png"):
         save_path: Optional path to save the figure
     """
     plt.figure(figsize=(14, 6))
-    
-    # Create subplots
+
     ax1 = plt.subplot(121)
     ax2 = plt.subplot(122)
-    
-    # Plot settings
+
     colors = {'Exact Clones': 'blue', 'Correlated Clones': 'red'}
     markers = {'Exact Clones': 'o', 'Correlated Clones': 's'}
-    
-    # Plot each metric type
+
     for condition, metrics in metrics_dict.items():
         n_clones = sorted(metrics.keys())
         aucs = [metrics[n]['auc'] for n in n_clones]
@@ -190,7 +217,6 @@ def plot_metrics_mult(metrics_dict, save_path="src/plots/mult_corr.png"):
                 marker=markers[condition],
                 linestyle='--')
     
-    # Configure plots
     ax1.set_title('Pairwise Interaction Detection (AUC)')
     ax1.set_xlabel('Number of Clones (n)')
     ax1.set_ylabel('AUC Score')
@@ -223,3 +249,4 @@ def plot_str_against_n(n_clones_list, p_strengths, a_strengths, task="correlatio
     if save_path:
         plt.savefig(save_path)
     plt.show()
+
