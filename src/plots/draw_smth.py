@@ -3,6 +3,18 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 
+def min_max_scale(data):
+    min_vals = data.min(axis=0)  # Minimum of each column
+    max_vals = data.max(axis=0)  # Maximum of each column
+    range_vals = max_vals - min_vals  # Range of each column
+    
+    # Handle case where range is zero (same values across the column)
+    range_vals[range_vals == 0] = 1  # Avoid division by zero by setting the range to 1 where max = min
+    
+    scaled_data = (data - min_vals) / range_vals
+    return scaled_data
+
+
 def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="src/plots"):
     """Visualize pairwise interactions as a heatmap."""
     os.makedirs(save_dir, exist_ok=True)
@@ -17,6 +29,8 @@ def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="s
     labels = [f'X{i+1}' for i in range(num_features)]
 
     plt.figure(figsize=(12, 10))
+
+
     sns.heatmap(
         matrix,
         annot=True,
@@ -24,8 +38,8 @@ def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="s
         cmap='coolwarm',
         xticklabels=labels,
         yticklabels=labels,
-        vmin=0,
-        vmax=1
+        vmin=matrix.min(),
+        vmax=matrix.max()
     )
     
     plt.title(f'Pairwise Interactions for {func_name}')
@@ -37,35 +51,59 @@ def draw_heatmap(pairwise_interactions, func_name,  num_features=10, save_dir="s
     plt.close()
 
 
-
 def plot_metrics(metrics_dict, save_path="src/plots/metrics_plot.png"):
     """Plot AUC and R-precision metrics for all functions"""
     plt.figure(figsize=(10, 6))
     
-    func_names = list(metrics_dict.keys())
-    auc_scores = [metrics_dict[name]['auc'] for name in func_names]
-    r_prec_scores = [metrics_dict[name]['r_precision'] for name in func_names]
+    # Filter out F11 and F12 if they exist
+    func_names = [name for name in metrics_dict.keys() if name not in ["F11", "F12"]]
     
-    x = np.arange(len(func_names))
+    # Get scores, filtering out None values but keeping track of which functions have valid scores
+    auc_scores = []
+    r_prec_scores = []
+    valid_func_names = []
+    
+    for name in func_names:
+        auc = metrics_dict[name].get('auc')
+        r_prec = metrics_dict[name].get('r_precision')
+        if auc is not None or r_prec is not None:
+            valid_func_names.append(name)
+            auc_scores.append(auc)
+            r_prec_scores.append(r_prec)
+    
+    x = np.arange(len(valid_func_names))
     width = 0.35
-
-    auc_bars = plt.bar(x - width/2, auc_scores, width, label='AUC', color='royalblue')
-    r_prec_bars = plt.bar(x + width/2, r_prec_scores, width, label='R-Precision', color='lightcoral')
+    
+    # Plot AUC scores if available
+    if any(score is not None for score in auc_scores):
+        auc_bars = plt.bar(x - width/2, [s if s is not None else 0 for s in auc_scores], 
+                          width, label='AUC', color='royalblue')
+    else:
+        auc_bars = None
+    
+    # Plot R-precision scores if available
+    if any(score is not None for score in r_prec_scores):
+        r_prec_bars = plt.bar(x + width/2, [s if s is not None else 0 for s in r_prec_scores], 
+                             width, label='R-Precision', color='lightcoral')
+    else:
+        r_prec_bars = None
     
     plt.ylabel('Scores')
     plt.title('Model Performance Metrics by Function')
-    plt.xticks(x, func_names)
+    plt.xticks(x, valid_func_names)
     plt.ylim(0, 1.1)
     plt.legend()
     
-    
-    add_labels(auc_bars)
-    add_labels(r_prec_bars)
-    
+    if auc_bars:
+        add_labels(auc_bars)
+    if r_prec_bars:
+        add_labels(r_prec_bars)
+        
     plt.tight_layout()
     plt.savefig(save_path)
     plt.show()
     plt.close()
+        
 
 
 def add_labels(bars):
@@ -112,3 +150,76 @@ def draw_heatmap_real_data(pairwise_interactions, dataset_name, feature_names=No
     
     plt.savefig(f'src/plots/real_data_heatmaps/{dataset_name}_heatmap.png')
     plt.close()
+
+
+
+def plot_metrics_mult(metrics_dict, save_path="src/plots/mult_corr.png"):
+    """
+    Plot AUC and R-Precision metrics for multicollinearity analysis
+    
+    Args:
+        metrics_dict: Dictionary containing results for different conditions
+            Format: {'Exact Clones': {n_clones: metrics}, 'Correlated Clones': {...}}
+        save_path: Optional path to save the figure
+    """
+    plt.figure(figsize=(14, 6))
+    
+    # Create subplots
+    ax1 = plt.subplot(121)
+    ax2 = plt.subplot(122)
+    
+    # Plot settings
+    colors = {'Exact Clones': 'blue', 'Correlated Clones': 'red'}
+    markers = {'Exact Clones': 'o', 'Correlated Clones': 's'}
+    
+    # Plot each metric type
+    for condition, metrics in metrics_dict.items():
+        n_clones = sorted(metrics.keys())
+        aucs = [metrics[n]['auc'] for n in n_clones]
+        r_precs = [metrics[n]['r_precision'] for n in n_clones]
+        
+        ax1.plot(n_clones, aucs, 
+                label=condition, 
+                color=colors[condition],
+                marker=markers[condition],
+                linestyle='--')
+        
+        ax2.plot(n_clones, r_precs,
+                label=condition,
+                color=colors[condition],
+                marker=markers[condition],
+                linestyle='--')
+    
+    # Configure plots
+    ax1.set_title('Pairwise Interaction Detection (AUC)')
+    ax1.set_xlabel('Number of Clones (n)')
+    ax1.set_ylabel('AUC Score')
+    ax1.grid(True)
+    ax1.legend()
+    
+    ax2.set_title('Any-Order Interaction Detection (R-Precision)')
+    ax2.set_xlabel('Number of Clones (n)')
+    ax2.set_ylabel('R-Precision Score')
+    ax2.grid(True)
+    ax2.legend()
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path)
+    plt.show()
+
+
+def plot_str_against_n(n_clones_list, p_strengths, a_strengths, task="correlation"):
+    save_path=f"src/plots/mult_corr_strength_{task}.png"
+    plt.figure(figsize=(10, 6))
+    plt.plot(n_clones_list, p_strengths, marker='o', label='Pairwise Interaction Strength')
+    plt.plot(n_clones_list, a_strengths, marker='s', label='Arbitrary-order Interaction Strength')
+    plt.xlabel('Number of Clones (n)')
+    plt.ylabel('Average Interaction Strength')
+    plt.title('Interaction Strength vs. Number of Clones')
+    plt.legend()
+    plt.grid(True)
+    if save_path:
+        plt.savefig(save_path)
+    plt.show()

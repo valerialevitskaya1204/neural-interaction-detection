@@ -7,7 +7,7 @@ import torch
 import os
 import matplotlib.pyplot as plt
 
-use_main_effect_nets = True
+use_main_effect_nets = False
 num_samples = 30000
 num_features = 10
 np.random.seed(52)
